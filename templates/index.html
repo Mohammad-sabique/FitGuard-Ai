@@ -1,0 +1,393 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>FitGuard AI</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">FG</div>
+    <button class="navBtn active" data-target="dashboard" title="Dashboard">🏠</button>
+    <button class="navBtn" data-target="analysis" title="Analysis">📊</button>
+    <button class="navBtn" data-target="recommendations" title="Recommendations">🧠</button>
+    <button class="navBtn" data-target="explainability" title="Explainability">💡</button>
+    <button class="navBtn" data-target="alerts" title="Doctor Alert">⚠️</button>
+    <button class="navBtn" data-target="progress" title="Progress">📈</button>
+    <button class="navBtn" data-target="profile" title="Profile">👤</button>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <div class="search">🔎 <input id="searchBox" placeholder="Search recommendations, logs, risk, meals..." /></div>
+      <div class="userChip">
+        <div class="avatar"></div>
+        <div class="userMeta">
+          <div class="name" id="topUserName">FitGuard AI</div>
+          <div class="role" id="topUserRole">Health-tech dashboard</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DASHBOARD -->
+    <section class="section active" id="dashboard">
+      <div class="titleRow">
+        <div>
+          <h1>Home / Intake Dashboard</h1>
+          <div class="sub">Capture profile, uploads, symptoms, and immediate risk indicators.</div>
+        </div>
+        <div class="toolbar">
+          <span class="pill low" id="inputStatusPill">Input Status: Waiting</span>
+          <span class="pill moderate" id="riskPill">Risk: —</span>
+        </div>
+      </div>
+
+      <div class="grid4">
+        <div class="card stat">
+          <div class="label">Input Status</div>
+          <div class="value" id="statStatus">Profile not completed</div>
+          <div class="note">Complete all required fields to generate recommendations.</div>
+        </div>
+        <div class="card stat">
+          <div class="label">Meal Photos Uploaded</div>
+          <div class="value" id="mealCount">0</div>
+          <div class="note">Use comma-separated file names.</div>
+        </div>
+        <div class="card stat">
+          <div class="label">Body Photos Uploaded</div>
+          <div class="value" id="bodyCount">0</div>
+          <div class="note">Use comma-separated file names.</div>
+        </div>
+        <div class="card stat">
+          <div class="label">Reports Uploaded</div>
+          <div class="value" id="reportCount">0</div>
+          <div class="note">Doctor notes / lab reports for priority checks.</div>
+        </div>
+      </div>
+
+      <div style="height:14px"></div>
+      <div class="grid2">
+        <div class="card">
+          <div class="sectionHeader">
+            <h2>Analysis Inputs</h2>
+            <div class="muted small">Profile, nutrition, and health flags</div>
+          </div>
+          <form id="intakeForm" class="formGrid">
+            <div><label>Name</label><input name="name" value="User" /></div>
+            <div><label>Age</label><input name="age" type="number" value="20" /></div>
+            <div><label>Sex</label>
+              <select name="sex"><option value="male">Male</option><option value="female">Female</option></select>
+            </div>
+            <div><label>Activity Level</label>
+              <select name="activity_level"><option value="sedentary">Sedentary</option><option value="light">Light</option><option value="moderate" selected>Moderate</option><option value="active">Active</option><option value="very_active">Very active</option></select>
+            </div>
+            <div><label>Height (cm)</label><input name="height_cm" type="number" value="179" step="0.1" /></div>
+            <div><label>Weight (kg)</label><input name="weight_kg" type="number" value="54" step="0.1" /></div>
+            <div><label>Fitness Goal</label>
+              <select name="goal"><option value="fat_loss">Fat Loss</option><option value="maintenance">Maintenance</option><option value="muscle_gain" selected>Muscle Gain</option></select>
+            </div>
+            <div><label>Diet Preference</label>
+              <select name="diet_preference"><option value="vegetarian">Vegetarian</option><option value="vegan">Vegan</option><option value="eggs">Eggs</option><option value="meat" selected>Meat</option></select>
+            </div>
+            <div><label>Allergies</label><input name="allergies" placeholder="peanuts, dairy" /></div>
+            <div><label>Blood Pressure</label>
+              <select name="blood_pressure"><option value="normal" selected>Normal</option><option value="elevated">Elevated</option><option value="high">High</option></select>
+            </div>
+            <div><label>Diabetes</label>
+              <select name="diabetes"><option value="no" selected>No</option><option value="yes">Yes</option></select>
+            </div>
+            <div><label>Other Conditions</label><input name="other_conditions" placeholder="thyroid, asthma, anemia" /></div>
+            <div class="full"><label>Manual Symptoms / Notes</label><textarea name="symptoms_notes" placeholder="dizzy in the morning, headache, chest discomfort, etc."></textarea></div>
+            <div><label>Meal Photos</label><input name="meal_photos" placeholder="meal1.jpg, lunch.png" /></div>
+            <div><label>Body Photos</label><input name="body_photos" placeholder="front.jpg, side.jpg" /></div>
+            <div class="full"><label>Doctor Reports</label><input name="reports" placeholder="blood_report.pdf, doctor_note.pdf" /></div>
+            <div class="full row" style="margin-top:6px">
+              <button class="btn" type="submit">Generate recommendation</button>
+              <button class="btn secondary" type="button" id="refreshLogsBtn">Refresh audit logs</button>
+            </div>
+          </form>
+          <div id="formErrors" class="warningBox errorBox" style="margin-top:14px"></div>
+        </div>
+
+        <div class="rightCol">
+          <div class="card">
+            <div class="sectionHeader"><h2>Risk Level</h2><div class="muted small" id="riskUpdated">Last update: —</div></div>
+            <div class="riskCircle">
+              <div style="text-align:center">
+                <div class="big" id="riskBig">Moderate</div>
+                <div class="small" id="riskSmall">Awaiting analysis</div>
+              </div>
+            </div>
+            <div style="height:12px"></div>
+            <div class="mutedNote" id="riskNarrative">No assessment performed yet.</div>
+          </div>
+
+          <div class="card">
+            <div class="sectionHeader"><h2>Recent History & Comparison</h2><div class="muted small">Latest submitted plans</div></div>
+            <div id="recentComparison" class="list">
+              <div class="miniCard">No recommendations yet.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="height:14px"></div>
+      <div class="grid2b">
+        <div class="card">
+          <div class="sectionHeader"><h2>Analysis Inputs Preview</h2><div class="muted small">Uploaded content tiles</div></div>
+          <div class="uploadGrid">
+            <div class="uploadBox">
+              <div class="logItemTitle">Meal Photos</div>
+              <div class="muted small" id="mealPreviewText">No meal photos uploaded.</div>
+              <div class="thumbs" id="mealThumbs"></div>
+            </div>
+            <div class="uploadBox">
+              <div class="logItemTitle">Body Photos</div>
+              <div class="muted small" id="bodyPreviewText">No body photos uploaded.</div>
+              <div class="thumbs" id="bodyThumbs"></div>
+            </div>
+            <div class="uploadBox">
+              <div class="logItemTitle">Doctor Reports</div>
+              <div class="muted small" id="reportPreviewText">No reports uploaded.</div>
+              <div class="thumbs" id="reportThumbs"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="sectionHeader"><h2>History Log</h2><div class="muted small">Audit-ready comparison</div></div>
+          <div class="tableWrap">
+            <table>
+              <thead><tr><th>Date</th><th>User</th><th>Risk</th><th>Summary</th></tr></thead>
+              <tbody id="historyTable"><tr><td colspan="4" class="muted">No history loaded.</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ANALYSIS -->
+    <section class="section" id="analysis">
+      <div class="titleRow">
+        <div>
+          <h1>Analysis Results</h1>
+          <div class="sub">Physiology, calorie math, and macro distribution.</div>
+        </div>
+      </div>
+      <div class="grid4">
+        <div class="card stat"><div class="label">BMI</div><div class="value" id="bmiVal">—</div><div class="note">Body mass index</div></div>
+        <div class="card stat"><div class="label">BMR</div><div class="value" id="bmrVal">—</div><div class="note" id="bmrFormulaVal">Mifflin-St Jeor</div></div>
+        <div class="card stat"><div class="label">TDEE</div><div class="value" id="tdeeVal">—</div><div class="note">Activity-adjusted calories</div></div>
+        <div class="card stat"><div class="label">Target Calories</div><div class="value" id="calVal">—</div><div class="note">Goal-adjusted daily target</div></div>
+      </div>
+      <div style="height:14px"></div>
+      <div class="grid2">
+        <div class="card">
+          <div class="sectionHeader"><h2>Macro Distribution</h2><div class="muted small">Visual breakdown</div></div>
+          <div class="chartBox"><canvas id="macroChart"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="sectionHeader"><h2>Risk Assessment</h2><div class="muted small">Decision status</div></div>
+          <div class="kpiGrid">
+            <div class="kpi"><div class="k">Protein</div><div class="v" id="proteinVal">—</div></div>
+            <div class="kpi"><div class="k">Fat</div><div class="v" id="fatVal">—</div></div>
+            <div class="kpi"><div class="k">Carbs</div><div class="v" id="carbVal">—</div></div>
+            <div class="kpi"><div class="k">Status</div><div class="v" id="statusVal">—</div></div>
+          </div>
+          <div style="height:12px"></div>
+          <div id="riskFlagsBox" class="warningBox">Run analysis to see safety flags.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- RECOMMENDATIONS -->
+    <section class="section" id="recommendations">
+      <div class="titleRow">
+        <div>
+          <h1>Recommendations</h1>
+          <div class="sub">7-day meal plan and weekly workout split.</div>
+        </div>
+      </div>
+      <div class="grid2">
+        <div class="card">
+          <div class="sectionHeader"><h2>Personalized Calorie Target</h2><div class="muted small">Goal-based</div></div>
+          <div class="heroMini">
+            <div class="card" style="background:#0f1730">
+              <div class="label" style="color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.08em">Daily target</div>
+              <div class="value" style="font-size:38px;font-weight:900" id="goalCalories">—</div>
+              <div class="muted small" id="goalLabel">—</div>
+            </div>
+            <div class="card" style="background:#0f1730">
+              <div class="label" style="color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.08em">Macro summary</div>
+              <div class="value" style="font-size:18px;font-weight:900" id="macroText">—</div>
+              <div class="muted small">Protein / fat / carbs</div>
+            </div>
+          </div>
+          <div style="height:14px"></div>
+          <div class="tableWrap">
+            <table>
+              <thead><tr><th>Day</th><th>Breakfast</th><th>Lunch</th><th>Dinner</th><th>Snack</th></tr></thead>
+              <tbody id="mealTable"><tr><td colspan="5" class="muted">No meal plan generated yet.</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="card">
+          <div class="sectionHeader"><h2>Weekly Workout Split</h2><div class="muted small">Exercise suggestions</div></div>
+          <div class="tableWrap">
+            <table>
+              <thead><tr><th>Day</th><th>Focus</th><th>Plan</th></tr></thead>
+              <tbody id="workoutTable"><tr><td colspan="3" class="muted">No workout plan generated yet.</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- EXPLAINABILITY -->
+    <section class="section" id="explainability">
+      <div class="titleRow">
+        <div>
+          <h1>Explainability</h1>
+          <div class="sub">Why this plan? Which formulas and rules were used?</div>
+        </div>
+      </div>
+      <div class="grid2">
+        <div class="card">
+          <div class="sectionHeader"><h2>Decision Explanation</h2><div class="muted small">Trace</div></div>
+          <div class="list" id="explainCalcList">
+            <div class="miniCard">No explanation yet.</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="sectionHeader"><h2>Why this recommendation?</h2><div class="muted small">Rules triggered</div></div>
+          <div class="list" id="explainRuleList">
+            <div class="miniCard">Run analysis to populate rule triggers.</div>
+          </div>
+        </div>
+      </div>
+      <div style="height:14px"></div>
+      <div class="card">
+        <div class="sectionHeader"><h2>Explainability History Log</h2><div class="muted small">Saved decision summaries</div></div>
+        <div class="tableWrap">
+          <table>
+            <thead><tr><th>Time</th><th>Risk</th><th>Decision Summary</th></tr></thead>
+            <tbody id="explainHistory"><tr><td colspan="3" class="muted">No log available.</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ALERTS -->
+    <section class="section" id="alerts">
+      <div class="titleRow">
+        <div>
+          <h1>Doctor Alert / Priority Review</h1>
+          <div class="sub">High-risk inputs suppress automated advice and push for professional review.</div>
+        </div>
+      </div>
+      <div class="grid2">
+        <div class="card">
+          <div class="sectionHeader"><h2>Safety Status</h2><div class="muted small">Current assessment</div></div>
+          <div id="alertBox" class="successBox">No alert yet. Run the analysis first.</div>
+          <div style="height:12px"></div>
+          <div id="alertList" class="list">
+            <div class="miniCard">Alerts will appear here.</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="sectionHeader"><h2>Recommended Action</h2><div class="muted small">Response guidance</div></div>
+          <div class="warningBox" id="actionBox">No action required yet.</div>
+          <div style="height:14px"></div>
+          <div class="miniCard">
+            <div class="logItemTitle">Escalation Rules</div>
+            <div class="muted small">Critical symptoms, uncontrolled conditions, extreme BMI values, or dangerous notes trigger a consult-first flow.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PROGRESS -->
+    <section class="section" id="progress">
+      <div class="titleRow">
+        <div>
+          <h1>Progress Tracking</h1>
+          <div class="sub">Monitoring change across submissions and trends over time.</div>
+        </div>
+      </div>
+      <div class="grid2">
+        <div class="card">
+          <div class="sectionHeader"><h2>Progress Overview</h2><div class="muted small">Trend snapshot</div></div>
+          <div class="progressWrap">
+            <div><div class="metricPair"><span>Weight trend</span><span id="trendWeight">—</span></div><div class="bar"><div id="weightBar" style="width:52%"></div></div></div>
+            <div><div class="metricPair"><span>Workout adherence</span><span id="trendWorkout">—</span></div><div class="bar"><div id="workoutBar" style="width:68%"></div></div></div>
+            <div><div class="metricPair"><span>Meal compliance</span><span id="trendMeal">—</span></div><div class="bar"><div id="mealBar" style="width:61%"></div></div></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="sectionHeader"><h2>Comparison Chart</h2><div class="muted small">Past vs latest</div></div>
+          <div class="chartBox"><canvas id="progressChart"></canvas></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PROFILE -->
+    <section class="section" id="profile">
+      <div class="titleRow">
+        <div>
+          <h1>Profile & History</h1>
+          <div class="sub">Stored user snapshot, history, and audit log.</div>
+        </div>
+      </div>
+      <div class="grid2">
+        <div class="card">
+          <div class="profileCardTop">
+            <div>
+              <p class="profileBig" id="profileName">No profile yet</p>
+              <div class="muted small" id="profileMeta">Submit a recommendation to populate this card.</div>
+            </div>
+            <div class="avatar small"></div>
+          </div>
+          <div class="divider"></div>
+          <div class="kpiGrid">
+            <div class="kpi"><div class="k">Age</div><div class="v" id="profAge">—</div></div>
+            <div class="kpi"><div class="k">Weight</div><div class="v" id="profWeight">—</div></div>
+            <div class="kpi"><div class="k">Height</div><div class="v" id="profHeight">—</div></div>
+            <div class="kpi"><div class="k">Activity</div><div class="v" id="profActivity">—</div></div>
+            <div class="kpi"><div class="k">Diet</div><div class="v" id="profDiet">—</div></div>
+            <div class="kpi"><div class="k">Goal</div><div class="v" id="profGoal">—</div></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="sectionHeader"><h2>History Log</h2><div class="muted small">Latest audit entries</div></div>
+          <div class="tableWrap">
+            <table>
+              <thead><tr><th>Date</th><th>Goal</th><th>Risk</th><th>Action</th></tr></thead>
+              <tbody id="profileHistory"><tr><td colspan="4" class="muted">No history available.</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div style="height:14px"></div>
+      <div class="grid2b">
+        <div class="card">
+          <div class="sectionHeader"><h2>Progress Overview</h2><div class="muted small">Quick audit summary</div></div>
+          <div class="list" id="progressOverviewList">
+            <div class="miniCard">No progress data yet.</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="sectionHeader"><h2>Audit Log</h2><div class="muted small">Stored recommendation logs</div></div>
+          <div class="list" id="auditLogList">
+            <div class="miniCard">No audit log yet.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
